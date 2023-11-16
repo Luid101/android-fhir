@@ -76,4 +76,19 @@
         android:textAppearance="?attr/textAppearanceBody2"
         tools:text="Id: #...456"
     />
+
+  <Button
+      android:id="@+id/export_vaccine"
+      android:layout_width="fill_parent"
+      android:layout_height="wrap_content"
+      android:layout_below="@id/field_name"
+      android:layout_alignParentEnd="true"
+      android:layout_alignStart="@id/name"
+      android:layout_marginTop="30dp"
+      android:layout_marginEnd="10dp"
+      android:layout_toEndOf="@id/status"
+      android:textAppearance="?attr/textAppearanceBody2"
+      tools:text="Export to Wallet"
+      android:visibility="gone"
+    />
 </RelativeLayout>

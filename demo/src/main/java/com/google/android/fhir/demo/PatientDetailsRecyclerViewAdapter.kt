@@ -33,7 +33,7 @@ import com.google.android.material.shape.MaterialShapeDrawable
 import com.google.android.material.shape.RoundedCornerTreatment
 import com.google.android.material.shape.ShapeAppearanceModel
 
-class PatientDetailsRecyclerViewAdapter(private val onScreenerClick: () -> Unit) :
+class PatientDetailsRecyclerViewAdapter(private val onScreenerClick: () -> Unit, private val onVaccineClick: () -> Unit, private val onExportToWalletClicked: () -> Unit) :
   ListAdapter<PatientDetailData, PatientDetailItemViewHolder>(PatientDetailDiffUtil()) {
   override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PatientDetailItemViewHolder {
     return when (ViewTypes.from(viewType)) {
@@ -45,6 +45,7 @@ class PatientDetailsRecyclerViewAdapter(private val onScreenerClick: () -> Unit)
         PatientOverviewItemViewHolder(
           PatientDetailsHeaderBinding.inflate(LayoutInflater.from(parent.context), parent, false),
           onScreenerClick,
+          onVaccineClick,
         )
       ViewTypes.PATIENT_PROPERTY ->
         PatientPropertyItemViewHolder(
@@ -57,6 +58,11 @@ class PatientDetailsRecyclerViewAdapter(private val onScreenerClick: () -> Unit)
       ViewTypes.CONDITION ->
         PatientDetailsConditionItemViewHolder(
           PatientListItemViewBinding.inflate(LayoutInflater.from(parent.context), parent, false),
+        )
+      ViewTypes.IMMUNIZATION ->
+        PatientDetailsImmunizationItemViewHolder(
+          PatientListItemViewBinding.inflate(LayoutInflater.from(parent.context), parent, false),
+          onExportToWalletClicked,
         )
     }
   }
@@ -86,6 +92,7 @@ class PatientDetailsRecyclerViewAdapter(private val onScreenerClick: () -> Unit)
       is PatientDetailProperty -> ViewTypes.PATIENT_PROPERTY
       is PatientDetailObservation -> ViewTypes.OBSERVATION
       is PatientDetailCondition -> ViewTypes.CONDITION
+      is PatientDetailImmunization -> ViewTypes.IMMUNIZATION
       else -> {
         throw IllegalArgumentException("Undefined Item type")
       }
@@ -154,9 +161,11 @@ abstract class PatientDetailItemViewHolder(v: View) : RecyclerView.ViewHolder(v)
 class PatientOverviewItemViewHolder(
   private val binding: PatientDetailsHeaderBinding,
   val onScreenerClick: () -> Unit,
+  val onVaccineClick: () -> Unit,
 ) : PatientDetailItemViewHolder(binding.root) {
   override fun bind(data: PatientDetailData) {
     binding.screener.setOnClickListener { onScreenerClick() }
+    binding.addVaccine.setOnClickListener { onVaccineClick() }
     (data as PatientDetailOverview).let { binding.title.text = it.patient.name }
     data.patient.riskItem?.let {
       binding.patientContainer.setBackgroundColor(it.patientCardColor)
@@ -212,12 +221,29 @@ class PatientDetailsConditionItemViewHolder(private val binding: PatientListItem
   }
 }
 
+class PatientDetailsImmunizationItemViewHolder(private val binding: PatientListItemViewBinding, val onExportToWalletClicked: () -> Unit,) :
+  PatientDetailItemViewHolder(binding.root) {
+  override fun bind(data: PatientDetailData) {
+    (data as PatientDetailImmunization).let {
+      binding.name.text = it.immunization.display
+      binding.fieldName.text = it.immunization.code
+
+      binding.exportVaccine.text = "Export to Wallet"
+      binding.exportVaccine.setOnClickListener{ onExportToWalletClicked() }
+    }
+    binding.exportVaccine.visibility = View.VISIBLE
+    binding.status.visibility = View.GONE
+    binding.id.visibility = View.GONE
+  }
+}
+
 enum class ViewTypes {
   HEADER,
   PATIENT,
   PATIENT_PROPERTY,
   OBSERVATION,
   CONDITION,
+  IMMUNIZATION,
   ;
 
   companion object {

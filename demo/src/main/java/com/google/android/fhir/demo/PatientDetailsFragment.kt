@@ -16,6 +16,7 @@
 
 package com.google.android.fhir.demo
 
+import android.app.Activity
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.Menu
@@ -23,6 +24,8 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -31,6 +34,14 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.google.android.fhir.FhirEngine
 import com.google.android.fhir.demo.databinding.PatientDetailBinding
+import java.util.UUID
+import java.util.stream.Collectors.toList
+import org.hl7.fhir.r4.model.CodeableConcept
+import org.hl7.fhir.r4.model.Coding
+import org.hl7.fhir.r4.model.Identifier
+import org.hl7.fhir.r4.model.Immunization
+import org.hl7.fhir.r4.model.Reference
+import androidx.lifecycle.viewModelScope
 
 /**
  * A fragment representing a single Patient detail screen. This fragment is contained in a
@@ -69,7 +80,7 @@ class PatientDetailsFragment : Fragment() {
           PatientDetailsViewModelFactory(requireActivity().application, fhirEngine, args.patientId),
         )
         .get(PatientDetailsViewModel::class.java)
-    val adapter = PatientDetailsRecyclerViewAdapter(::onAddScreenerClick)
+    val adapter = PatientDetailsRecyclerViewAdapter(::onAddScreenerClick, ::onVaccineClick, ::onExportToWalletClicked)
     binding.recycler.adapter = adapter
     (requireActivity() as AppCompatActivity).supportActionBar?.apply {
       title = "Patient Card"
@@ -93,6 +104,33 @@ class PatientDetailsFragment : Fragment() {
         ),
       )
   }
+
+  private fun onVaccineClick() {
+
+    val patientReference = Reference().apply {
+      reference = "Patient/${args.patientId}"
+    }
+
+    val localVaccineCode = CodeableConcept().apply {
+      coding= mutableListOf(Coding("http://hl7.org/fhir/sid/cvx", "207", "Moderna Vaccine"))
+    }
+
+    val vaccine = Immunization().apply {
+      id = UUID.randomUUID().toString()
+      patient = patientReference
+      vaccineCode = localVaccineCode
+    }
+
+    patientDetailsViewModel.setVaccineData(vaccine)
+
+    Toast.makeText(context, "Added vaccine information!", Toast.LENGTH_SHORT).show()
+  }
+
+  private fun onExportToWalletClicked(){
+    Toast.makeText(context, "Exported to wallet!", Toast.LENGTH_SHORT).show()
+  }
+
+  // private fun
 
   override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
     inflater.inflate(R.menu.details_options_menu, menu)

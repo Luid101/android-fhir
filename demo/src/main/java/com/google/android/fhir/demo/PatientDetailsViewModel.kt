@@ -38,12 +38,14 @@ import java.util.Locale
 import kotlinx.coroutines.launch
 import org.apache.commons.lang3.StringUtils
 import org.hl7.fhir.r4.model.Condition
+import org.hl7.fhir.r4.model.Immunization
 import org.hl7.fhir.r4.model.Observation
 import org.hl7.fhir.r4.model.Patient
 import org.hl7.fhir.r4.model.Resource
 import org.hl7.fhir.r4.model.ResourceType
 import org.hl7.fhir.r4.model.RiskAssessment
 import org.hl7.fhir.r4.model.codesystems.RiskProbability
+import timber.log.Timber
 
 /**
  * The ViewModel helper class for PatientItemRecyclerViewAdapter, that is responsible for preparing
@@ -61,6 +63,10 @@ class PatientDetailsViewModel(
     viewModelScope.launch { livePatientData.value = getPatientDetailDataModel() }
   }
 
+  fun setVaccineData( vaccine: Immunization){
+    viewModelScope.launch { fhirEngine.create(vaccine)}
+  }
+
   private suspend fun getPatientDetailDataModel(): List<PatientDetailData> {
     val searchResult =
       fhirEngine.search<Patient> {
@@ -69,6 +75,7 @@ class PatientDetailsViewModel(
         revInclude<RiskAssessment>(RiskAssessment.SUBJECT)
         revInclude<Observation>(Observation.SUBJECT)
         revInclude<Condition>(Condition.SUBJECT)
+        revInclude<Immunization>(Immunization.PATIENT)
       }
     val data = mutableListOf<PatientDetailData>()
 
@@ -87,6 +94,19 @@ class PatientDetailsViewModel(
       it.revIncluded?.get(ResourceType.Condition to Condition.SUBJECT.paramName)?.let {
         data.addConditionsData(it as List<Condition>)
       }
+      it.revIncluded?.get(ResourceType.Immunization to Immunization.PATIENT.paramName)?.let {
+        Timber.tag("Hello").d("Begin");
+        Timber.tag("Hello").d((it as java.util.List<Immunization>).size.toString());
+        if ((it as java.util.List< Immunization >).size >= 1) {
+          val vaccine = (it as java.util.List<Immunization>).get(0);
+          Timber.tag("Hello").d(vaccine.toString());
+          Timber.tag("Hello").d(vaccine.vaccineCode.coding.get(0).code);
+          Timber.tag("Hello").d(vaccine.vaccineCode.coding.get(0).system);
+        }
+        Timber.tag("Hello").d("End");
+        data.addImmunizationsData(it as List<Immunization>)
+      }
+
     }
     return data
   }
@@ -182,6 +202,23 @@ class PatientDetailsViewModel(
             conditionItem,
             firstInGroup = index == 0,
             lastInGroup = index == conditions.size - 1,
+          )
+        }
+        .let { addAll(it) }
+    }
+  }
+
+  private fun MutableList<PatientDetailData>.addImmunizationsData(immunizations: List<Immunization>) {
+    if (immunizations.isNotEmpty()) {
+      add(PatientDetailHeader(getString(R.string.header_immunizations)))
+      immunizations
+        .take(MAX_RESOURCE_COUNT)
+        .map { createImmunizationItem(it, getApplication<Application>().resources) }
+        .mapIndexed { index, immunizationItem ->
+          PatientDetailImmunization(
+            immunizationItem,
+            firstInGroup = index == 0,
+            lastInGroup = index == immunizations.size - 1,
           )
         }
         .let { addAll(it) }
@@ -319,6 +356,21 @@ class PatientDetailsViewModel(
         value,
       )
     }
+
+    /** Creates ConditionItem objects with displayable values from the Fhir Condition objects. */
+    private fun createImmunizationItem(
+      immunization: Immunization,
+      resources: Resources,
+    ): PatientListViewModel.ImmunizationItem {
+      val vaccineCode = immunization.vaccineCode.coding.get(0).code
+      val vaccineDisplay = immunization.vaccineCode.coding.get(0).display
+
+      return PatientListViewModel.ImmunizationItem(
+        immunization.logicalId,
+        vaccineCode,
+        vaccineDisplay
+      )
+    }
   }
 }
 
@@ -353,6 +405,12 @@ data class PatientDetailObservation(
 
 data class PatientDetailCondition(
   val condition: PatientListViewModel.ConditionItem,
+  override val firstInGroup: Boolean = false,
+  override val lastInGroup: Boolean = false,
+) : PatientDetailData
+
+data class PatientDetailImmunization(
+  val immunization: PatientListViewModel.ImmunizationItem,
   override val firstInGroup: Boolean = false,
   override val lastInGroup: Boolean = false,
 ) : PatientDetailData

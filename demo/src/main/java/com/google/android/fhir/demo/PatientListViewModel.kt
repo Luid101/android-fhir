@@ -162,6 +162,14 @@ class PatientListViewModel(application: Application, private val fhirEngine: Fhi
     override fun toString(): String = code
   }
 
+  data class ImmunizationItem(
+    val id: String,
+    val code: String,
+    val display: String,
+  ) {
+    override fun toString(): String = code
+  }
+
   class PatientListViewModelFactory(
     private val application: Application,
     private val fhirEngine: FhirEngine,
